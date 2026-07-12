@@ -1,0 +1,16 @@
+# Environments
+.env
+.venv/
+
+# Data boundaries (Strictly isolated)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
