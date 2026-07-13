@@ -1,0 +1,34 @@
+causal_inference
+├── data
+│   ├── processed
+│   │   └── .gitkeep
+│   └── raw
+│       └── .gitkeep
+├── scripts
+│   ├── CopyProjectStructure.ps1
+│   └── project_structure.txt
+├── src
+│   └── causal_inference
+│       ├── api
+│       ├── core
+│       │   └── dml_engine.py
+│       ├── services
+│       │   └── data_ingestion.py
+│       ├── utils
+│       ├── __init__.py
+│       ├── config.py
+│       ├── main.py
+│       └── py.typed
+├── tests
+│   ├── integration
+│   ├── unit
+│   └── conftest.py
+├── .env
+├── .gitignore
+├── .python-version
+├── DEVELOPER_INSTRUCTION.md
+├── Makefile
+├── pyproject.toml
+├── README.md
+└── uv.lock
+
