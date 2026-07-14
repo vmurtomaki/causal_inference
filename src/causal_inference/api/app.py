@@ -1,13 +1,14 @@
 import streamlit as st
-import numpy as np
 
-# Constant derived from your causal pipeline execution
+# TODO: Hard coded constants. Modify so that values change when dml_engine change. Some solution to this.
+# Constant derived from causal pipeline execution
 ELASTICITY_THETA = -0.4699
 BASELINE_PROBABILITY = 0.60  # Example baseline for the CH product
 
+
 def run_dashboard() -> None:
     st.set_page_config(page_title="Causal Pricing Simulator", layout="wide")
-    
+
     st.title("📈 Causal Pricing AI: Scenario Simulator")
     st.markdown(f"""
     **Model Status:** Production-Ready  
@@ -20,8 +21,7 @@ def run_dashboard() -> None:
     # Sidebar for Scenario Inputs
     st.sidebar.header("Scenario Configuration")
     price_change = st.sidebar.slider(
-        "Hypothetical Price Increase ($)", 
-        min_value=-1.0, max_value=2.0, value=0.5, step=0.1
+        "Hypothetical Price Increase ($)", min_value=-1.0, max_value=2.0, value=0.5, step=0.1
     )
 
     # Calculation logic
@@ -34,11 +34,11 @@ def run_dashboard() -> None:
 
     with col1:
         st.subheader("Impact Visualization")
-        st.metric(label="Original Probability", value=f"{BASELINE_PROBABILITY*100:.1f}%")
+        st.metric(label="Original Probability", value=f"{BASELINE_PROBABILITY * 100:.1f}%")
         st.metric(
-            label="Projected Probability", 
-            value=f"{new_probability*100:.1f}%",
-            delta=f"{prob_impact*100:.2f} pp"
+            label="Projected Probability",
+            value=f"{new_probability * 100:.1f}%",
+            delta=f"{prob_impact * 100:.2f} pp",
         )
 
     with col2:
@@ -49,6 +49,7 @@ def run_dashboard() -> None:
             st.success("✅ Price increase likely to improve margins without drastic volume loss.")
         else:
             st.warning("⚠️ Neutral impact; monitor competitive response.")
+
 
 if __name__ == "__main__":
     run_dashboard()

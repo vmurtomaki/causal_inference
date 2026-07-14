@@ -5,6 +5,7 @@ from causal_inference.services.data_ingestion import (
     partition_causal_roles,
 )
 
+
 def main() -> None:
     """
     Primary orchestrator for the causal inference lifecycle.
@@ -49,7 +50,7 @@ def main() -> None:
 
     print("\nModel Statistical Summary:")
     print(dml_model.summary)
-    
+
     # NEW: Execute Phase 9 Robustness Check
     evaluate_robustness(dml_model=dml_model, cf_y=0.05, cf_d=0.05)
 
