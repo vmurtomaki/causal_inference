@@ -46,6 +46,8 @@ uv sync
 ```bash
 uv run --env-file .env python src/causal_inference/main.py
 
+# For streamlit
+uv run streamlit run src/causal_inference/api/app.py
 ```
 
 
