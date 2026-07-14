@@ -12,9 +12,20 @@ $Output = [System.Text.StringBuilder]::new()
 [void]$Output.AppendLine($RootDir.Name)
 
 function Get-Tree($CurrentDir, $Indent) {
-    # Get directories, excluding .git and .venv
+    # Exclude typical environment, git, and cache folders
+    $ExcludeList = @(
+        '.git', 
+        '.venv', 
+        'venv', 
+        '.mypy_cache', 
+        '.pytest_cache', 
+        '.ruff_cache', 
+        '__pycache__'
+    )
+
+    # Get directories, filtering out excluded names
     $Dirs = Get-ChildItem -Path $CurrentDir.FullName -Directory | 
-            Where-Object { $_.Name -notin '.git', '.venv' }
+            Where-Object { $_.Name -notin $ExcludeList }
     
     # Get files in the current directory
     $Files = Get-ChildItem -Path $CurrentDir.FullName -File
@@ -25,7 +36,7 @@ function Get-Tree($CurrentDir, $Indent) {
         $Marker = if ($IsLast) { "└── " } else { "├── " }
         [void]$Output.AppendLine(($Indent + $Marker + $Dirs[$i].Name))
         
-        # Fixed for PS 5.1 compatibility: Clean if/else blocks for indentation
+        # Clean if/else blocks for indentation
         if ($IsLast) {
             $NextIndent = $Indent + "    "
         } else {
