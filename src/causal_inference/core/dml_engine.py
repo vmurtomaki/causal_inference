@@ -24,3 +24,18 @@ def estimate_price_elasticity(
 
     dml_plr.fit()
     return dml_plr
+
+def evaluate_robustness(dml_model: DoubleMLPLR, cf_y: float = 0.05, cf_d: float = 0.05) -> None:
+    """
+    Executes Phase 9: Robustness and Sensitivity Analysis.
+    Calculates bounds by simulating an unobserved confounder that explains a 
+    certain percentage of residual variance in both the outcome (cf_y) and treatment (cf_d).
+    """
+    # Execute the sensitivity analysis using Omitted Variable Bias (OVB) bounds
+    dml_model.sensitivity_analysis(cf_y=cf_y, cf_d=cf_d, rho=1.0)
+    
+    print("-" * 50)
+    print("SENSITIVITY ANALYSIS (OMITTED VARIABLE BIAS)")
+    print("-" * 50)
+    print(f"Hypothetical unobserved confounder explaining {cf_y*100}% variance in Y and {cf_d*100}% in D.")
+    print(dml_model.sensitivity_summary)

@@ -1,10 +1,9 @@
 from causal_inference.config import config
-from causal_inference.core.dml_engine import estimate_price_elasticity
+from causal_inference.core.dml_engine import estimate_price_elasticity, evaluate_robustness
 from causal_inference.services.data_ingestion import (
     fetch_observational_data,
     partition_causal_roles,
 )
-
 
 def main() -> None:
     """
@@ -50,6 +49,9 @@ def main() -> None:
 
     print("\nModel Statistical Summary:")
     print(dml_model.summary)
+    
+    # NEW: Execute Phase 9 Robustness Check
+    evaluate_robustness(dml_model=dml_model, cf_y=0.05, cf_d=0.05)
 
 
 if __name__ == "__main__":
