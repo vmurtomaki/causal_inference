@@ -1,20 +1,39 @@
 import streamlit as st
 
-# TODO: Hard coded constants. Modify so that values change when dml_engine change. Some solution to this.
-# Constant derived from causal pipeline execution
-ELASTICITY_THETA = -0.4699
-BASELINE_PROBABILITY = 0.60  # Example baseline for the CH product
+from causal_inference.config import config
+from causal_inference.services.artifact_manager import load_metrics
+
+
+@st.cache_data
+def fetch_pipeline_artifacts() -> dict[str, float]:
+    """
+    Retrieves the serialized metrics from disk.
+    Decorated with cache_data to prevent repetitive disk I/O on widget interaction.
+    """
+    try:
+        return load_metrics(config.artifact_path)
+    except FileNotFoundError:
+        st.error(
+            "⚠️ Artifact payload not found. "
+            "Please execute the causal inference pipeline before launching the dashboard."
+        )
+        st.stop()
 
 
 def run_dashboard() -> None:
     st.set_page_config(page_title="Causal Pricing Simulator", layout="wide")
 
+    # Ingest dynamic metrics
+    metrics = fetch_pipeline_artifacts()
+    elasticity_theta = metrics["marginal_effect"]
+    baseline_probability = metrics["baseline_prob"]
+
     st.title("📈 Causal Pricing AI: Scenario Simulator")
-    st.markdown(f"""
-    **Model Status:** Production-Ready  
-    **Estimated Price Elasticity ($\theta_0$):** `{ELASTICITY_THETA}`  
-    *Interpretation: A $1.00 increase in price changes purchase probability by ~46.99 percentage points.*
-    """)
+    st.markdown(
+        "**Model Status:** Production-Ready\n\n"
+        f"**Estimated Price Elasticity ($\\theta_0$):** `{elasticity_theta:.4f}`\n\n"
+        f"*Interpretation: A $1.00 increase in price changes purchase probability by ~{elasticity_theta * 100:.2f} percentage points.*"
+    )
 
     st.divider()
 
@@ -26,15 +45,15 @@ def run_dashboard() -> None:
 
     # Calculation logic
     # Linear approximation for probability change: ΔP ≈ θ * ΔPrice
-    prob_impact = ELASTICITY_THETA * price_change
-    new_probability = max(0.0, min(1.0, BASELINE_PROBABILITY + prob_impact))
+    prob_impact = elasticity_theta * price_change
+    new_probability = max(0.0, min(1.0, baseline_probability + prob_impact))
 
     # Main UI Layout
     col1, col2 = st.columns(2)
 
     with col1:
         st.subheader("Impact Visualization")
-        st.metric(label="Original Probability", value=f"{BASELINE_PROBABILITY * 100:.1f}%")
+        st.metric(label="Original Probability", value=f"{baseline_probability * 100:.1f}%")
         st.metric(
             label="Projected Probability",
             value=f"{new_probability * 100:.1f}%",

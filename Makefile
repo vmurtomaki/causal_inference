@@ -1,4 +1,4 @@
-.PHONY: check format typecheck test
+.PHONY: check format typecheck test run-pipeline run-app run-all
 
 check:
 	uv run ruff check . --fix
@@ -11,5 +11,13 @@ typecheck:
 
 test:
 	uv run pytest tests/ -v
+
+run-pipeline:
+	uv run --env-file .env python src/causal_inference/main.py
+
+run-app:
+	uv run --env-file .env streamlit run src/causal_inference/api/app.py
+
+run-all: run-pipeline run-app
 
 all: format check typecheck test

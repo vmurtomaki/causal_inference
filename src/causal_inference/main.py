@@ -1,5 +1,6 @@
 from causal_inference.config import config
 from causal_inference.core.dml_engine import estimate_price_elasticity, evaluate_robustness
+from causal_inference.services.artifact_manager import save_metrics
 from causal_inference.services.data_ingestion import (
     fetch_observational_data,
     partition_causal_roles,
@@ -16,10 +17,14 @@ def main() -> None:
     raw_df = fetch_observational_data(config.data_path)
     df, y_col, d_col, x_cols = partition_causal_roles(raw_df)
 
+    # Dynamically calculate the baseline probability (mean of binary outcome)
+    baseline_prob = float(df[y_col].mean())
+
     print(f"Data successfully parsed. Confounders detected: {len(x_cols)}")
+    print(f"Baseline Purchase Probability: {baseline_prob:.4f}")
     print("Executing Double Machine Learning (PLR) cross-fitting sequence...")
 
-    # Execute orthogonal estimation (Logic remains unchanged)
+    # Execute orthogonal estimation
     dml_model = estimate_price_elasticity(
         df=df,
         y_col=y_col,
@@ -30,8 +35,8 @@ def main() -> None:
     )
 
     # Synthesize causal findings
-    marginal_effect = dml_model.coef[0]
-    p_value = dml_model.pval[0]
+    marginal_effect = float(dml_model.coef[0])
+    p_value = float(dml_model.pval[0])
 
     print("-" * 50)
     print("CAUSAL IDENTIFICATION RESULTS")
@@ -51,8 +56,18 @@ def main() -> None:
     print("\nModel Statistical Summary:")
     print(dml_model.summary)
 
-    # NEW: Execute Phase 9 Robustness Check
+    # Execute Phase 9 Robustness Check
     evaluate_robustness(dml_model=dml_model, cf_y=0.05, cf_d=0.05)
+
+    # Persist metrics for frontend consumption
+    print(f"\nSerializing artifacts to {config.artifact_path}...")
+    save_metrics(
+        marginal_effect=marginal_effect,
+        p_value=p_value,
+        baseline_prob=baseline_prob,
+        filepath=config.artifact_path,
+    )
+    print("Pipeline execution complete.")
 
 
 if __name__ == "__main__":
