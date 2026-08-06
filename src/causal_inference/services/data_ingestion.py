@@ -21,25 +21,19 @@ def partition_causal_roles(df: pd.DataFrame) -> tuple[pd.DataFrame, str, str, li
     Translates the ISLR Orange Juice dataframe into structured causal roles.
     Isolates the target outcome, treatment variable, and high-dimensional confounders.
     """
-    # Create a clean working copy to avoid SettingWithCopy warnings
     processed_df = df.copy()
-
-    # Transform categorical outcome into a binary numerical indicator (1 = CH, 0 = MM)
     processed_df["Purchase_CH"] = (processed_df["Purchase"] == "CH").astype(int)
 
-    # Define the Causal Graph nodes
-    y_col = "Purchase_CH"  # Outcome (Y): Probability of purchasing Citrus Hill
-    d_col = "SalePriceCH"  # Treatment (D): The actual price paid for Citrus Hill
+    y_col = "Purchase_CH"
+    d_col = "SalePriceCH"
 
-    # Define the Confounding Adjustment Set (X)
-    # We must control for loyalty, baseline prices, competitor final prices, and promotions.
+    # PriceCH and SpecialCH deliberately EXCLUDED: SalePriceCH = PriceCH - (promo discount
+    # implied by SpecialCH), so conditioning on them induces perfect collinearity with the
+    # treatment and destroys the exogenous variance the orthogonal score requires.
     x_cols = [
-        "LoyalCH",  # Customer's historical loyalty to CH
-        "PriceCH",  # Baseline list price of CH
-        "SpecialCH",  # Indicator of a CH promotion
-        "SalePriceMM",  # Actual sale price of competitor (Minute Maid)
-        "PriceMM",  # Baseline list price of MM
-        "SpecialMM",  # Indicator of a MM promotion
+        "LoyalCH",
+        "SalePriceMM",
+        "PriceMM",
+        "SpecialMM",
     ]
-
     return processed_df, y_col, d_col, x_cols

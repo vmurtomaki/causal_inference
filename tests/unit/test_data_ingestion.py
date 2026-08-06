@@ -23,11 +23,9 @@ def test_partition_causal_roles() -> None:
 
     # 2. Execute the function
     processed_df, y_col, d_col, x_cols = partition_causal_roles(df)
-
-    # 3. Assert causal roles are assigned correctly
     assert y_col == "Purchase_CH"
     assert d_col == "SalePriceCH"
-    assert len(x_cols) == 6
-
-    # 4. Assert categorical transformation was successful (CH=1, MM=0)
+    assert len(x_cols) == 4  # PriceCH, SpecialCH deliberately excluded (see data_ingestion.py)
+    assert "PriceCH" not in x_cols
+    assert "SpecialCH" not in x_cols
     assert processed_df["Purchase_CH"].tolist() == [1, 0, 1]

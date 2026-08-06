@@ -56,3 +56,20 @@ uv run streamlit run src/causal_inference/api/app.py
 make format && make check && make typecheck
 
 ```
+
+## Known Limitations
+
+- **Linear Probability Model on a binary outcome.** The outcome (`Purchase_CH`) is binary,
+  but this pipeline fits a Partially Linear Regression, which is additive and unconstrained
+  to [0, 1]. This is why the dashboard (`app.py`) must manually clip projected probabilities
+  to a valid range. A production version should use a Logistic PLR or an Interactive
+  Regression Model designed for binary treatment/outcome effects.
+- **Sensitivity analysis bounds are illustrative, not benchmarked.** `evaluate_robustness`
+  uses fixed `cf_y=0.05, cf_d=0.05` values. These are not derived from the explanatory power
+  of observed covariates (e.g. `LoyalCH`) and should not be read as a rigorous bound on
+  omitted variable bias.
+- **No hyperparameter tuning.** `LGBMRegressor` settings (`n_estimators`, `learning_rate`)
+  are fixed, not cross-validated. Residual confounding bias may remain if the nuisance
+  models' out-of-sample fit is suboptimal.
+- no naive (OLS/logistic) baseline
+- no out-of-sample nuisance-model diagnostic

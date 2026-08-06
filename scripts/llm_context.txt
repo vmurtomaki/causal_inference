@@ -1,10 +1,10 @@
-﻿<project_tree>
+<project_tree>
 causal_inference
 +-- scripts
 |   +-- CopyProjectStructure.ps1
 |   +-- CopyProjectStructureWithContent.ps1
 |   +-- generate_context.ps1
-|   \-- project_structure.txt
+|   \-- llm_context.txt
 +-- src
 |   \-- causal_inference
 |       +-- api
@@ -12,15 +12,18 @@ causal_inference
 |       +-- core
 |       |   \-- dml_engine.py
 |       +-- services
+|       |   +-- __init__.py
+|       |   +-- artifact_manager.py
 |       |   \-- data_ingestion.py
 |       +-- utils
+|       +-- __init__.py
 |       +-- config.py
 |       +-- main.py
-|       +-- py.typed
-|       \-- __init__.py
+|       \-- py.typed
 +-- tests
 |   +-- integration
 |   +-- unit
+|   |   +-- test_artifact_manager.py
 |   |   \-- test_data_ingestion.py
 |   \-- conftest.py
 +-- .env
@@ -190,152 +193,43 @@ $FinalString | Set-Clipboard
 
 Write-Host "Token-efficient structure and contents copied to clipboard and saved!" -ForegroundColor Green
 </file>
-<file path="scripts/project_structure.txt">
-<project_tree>
-causal_inference
-├── data
-│   ├── processed
-│   │   └── .gitkeep
-│   └── raw
-│       ├── .gitkeep
-│       └── oj_data.csv
-├── scripts
-│   ├── CopyProjectStructure.ps1
-│   ├── CopyProjectStructureWithContent.ps1
-│   └── project_structure.txt
-├── src
-│   └── causal_inference
-│       ├── api
-│       │   └── app.py
-│       ├── core
-│       │   └── dml_engine.py
-│       ├── services
-│       │   └── data_ingestion.py
-│       ├── utils
-│       ├── __init__.py
-│       ├── config.py
-│       ├── main.py
-│       └── py.typed
-├── tests
-│   ├── integration
-│   ├── unit
-│   │   └── test_data_ingestion.py
-│   └── conftest.py
-├── .env
-├── .gitignore
-├── .python-version
-├── DEVELOPER_INSTRUCTION.md
-├── Makefile
-├── pyproject.toml
-├── README.md
-└── uv.lock
-</project_tree>
-<file path="scripts/CopyProjectStructureWithContent.ps1">
-# Define the root and the scripts subfolder
-$RootDir = Get-Item .
-$ScriptsDir = Join-Path $RootDir.FullName "scripts"
-$OutputFile = Join-Path $ScriptsDir "project_structure.txt"
-
-# Ensure the scripts directory exists
-if (-not (Test-Path $ScriptsDir)) {
-    New-Item -ItemType Directory -Path $ScriptsDir | Out-Null
-}
-
-$Output = [System.Text.StringBuilder]::new()
-
-# Wrap tree in an XML tag
-[void]$Output.AppendLine("<project_tree>")
-[void]$Output.AppendLine($RootDir.Name)
-
-$Script:FilesToInclude = [System.Collections.Generic.List[System.IO.FileInfo]]::new()
-
-function ShouldIncludeContent($File) {
-    $ExcludeExtensions = @('.csv', '.xlsx', '.png', '.jpg', '.jpeg', '.gif', '.pdf', '.zip', '.tar', '.gz', '.lock', '.gitkeep')
-    $ExcludeNames = @('Makefile', '.env', '.gitignore', '.python-version', 'project_structure.txt', 'CopyProjectStructure.ps1')
-
-    if ($File.Extension -in $ExcludeExtensions) { return $false }
-    if ($File.Name -in $ExcludeNames) { return $false }
-
-    return $true
-}
-
-function Get-Tree($CurrentDir, $Indent) {
-    $ExcludeList = @('.git', '.venv', 'venv', '.mypy_cache', '.pytest_cache', '.ruff_cache', '__pycache__')
-
-    $Dirs = Get-ChildItem -Path $CurrentDir.FullName -Directory | 
-            Where-Object { $_.Name -notin $ExcludeList }
-    
-    $Files = Get-ChildItem -Path $CurrentDir.FullName -File
-
-    # Process Directories
-    for ($i = 0; $i -lt $Dirs.Count; $i++) {
-        $IsLast = ($i -eq $Dirs.Count - 1) -and ($Files.Count -eq 0)
-        $Marker = if ($IsLast) { "└── " } else { "├── " }
-        [void]$Output.AppendLine(($Indent + $Marker + $Dirs[$i].Name))
-        
-        $NextIndent = if ($IsLast) { $Indent + "    " } else { $Indent + "│   " }
-        Get-Tree $Dirs[$i] $NextIndent
-    }
-
-    # Process Files
-    for ($i = 0; $i -lt $Files.Count; $i++) {
-        $IsLast = $i -eq ($Files.Count - 1)
-        $Marker = if ($IsLast) { "└── " } else { "├── " }
-        [void]$Output.AppendLine(($Indent + $Marker + $Files[$i].Name))
-
-        if (ShouldIncludeContent $Files[$i]) {
-            $Script:FilesToInclude.Add($Files[$i])
-        }
-    }
-}
-
-# Run tree generator
-Get-Tree $RootDir ""
-[void]$Output.AppendLine("</project_tree>")
-
-# Append file contents using token-efficient XML tags
-foreach ($File in $Script:FilesToInclude) {
-    $RelativePath = $File.FullName.Replace($RootDir.FullName, "").TrimStart("\").TrimStart("/")
-    $RelativePath = $RelativePath.Replace("\", "/") # Normalize slashes for consistency
-    
-    [void]$Output.AppendLine("<file path=`"$RelativePath`">")
-    
-    try {
-        # Read file, trim leading/trailing whitespace to save tokens
-        $Content = (Get-Content -Path $File.FullName -Raw -Encoding UTF8).Trim()
-        [void]$Output.AppendLine($Content)
-    } catch {
-        [void]$Output.AppendLine("[error reading file]")
-    }
-    
-    [void]$Output.AppendLine("</file>")
-}
-
-# Convert and save
-$FinalString = $Output.ToString()
-$FinalString | Out-File -FilePath $OutputFile -Encoding utf8
-$FinalString | Set-Clipboard
-
-Write-Host "Token-efficient structure and contents copied to clipboard and saved!" -ForegroundColor Green
-</file>
 <file path="src/causal_inference/api/app.py">
 import streamlit as st
 
-# TODO: Hard coded constants. Modify so that values change when dml_engine change. Some solution to this.
-# Constant derived from causal pipeline execution
-ELASTICITY_THETA = -0.4699
-BASELINE_PROBABILITY = 0.60  # Example baseline for the CH product
+from causal_inference.config import config
+from causal_inference.services.artifact_manager import load_metrics
+
+
+@st.cache_data
+def fetch_pipeline_artifacts() -> dict[str, float]:
+    """
+    Retrieves the serialized metrics from disk.
+    Decorated with cache_data to prevent repetitive disk I/O on widget interaction.
+    """
+    try:
+        return load_metrics(config.artifact_path)
+    except FileNotFoundError:
+        st.error(
+            "⚠️ Artifact payload not found. "
+            "Please execute the causal inference pipeline before launching the dashboard."
+        )
+        st.stop()
 
 
 def run_dashboard() -> None:
     st.set_page_config(page_title="Causal Pricing Simulator", layout="wide")
 
+    # Ingest dynamic metrics
+    metrics = fetch_pipeline_artifacts()
+    elasticity_theta = metrics["marginal_effect"]
+    baseline_probability = metrics["baseline_prob"]
+
     st.title("📈 Causal Pricing AI: Scenario Simulator")
-    st.markdown(f"""
-    **Model Status:** Production-Ready  
-    **Estimated Price Elasticity ($\theta_0$):** `{ELASTICITY_THETA}`  
-    *Interpretation: A $1.00 increase in price changes purchase probability by ~46.99 percentage points.*
-    """)
+    st.markdown(
+        "**Model Status:** Production-Ready\n\n"
+        f"**Estimated Price Elasticity ($\\theta_0$):** `{elasticity_theta:.4f}`\n\n"
+        f"*Interpretation: A $1.00 increase in price changes purchase probability by ~{elasticity_theta * 100:.2f} percentage points.*"
+    )
 
     st.divider()
 
@@ -347,15 +241,15 @@ def run_dashboard() -> None:
 
     # Calculation logic
     # Linear approximation for probability change: ΔP ≈ θ * ΔPrice
-    prob_impact = ELASTICITY_THETA * price_change
-    new_probability = max(0.0, min(1.0, BASELINE_PROBABILITY + prob_impact))
+    prob_impact = elasticity_theta * price_change
+    new_probability = max(0.0, min(1.0, baseline_probability + prob_impact))
 
     # Main UI Layout
     col1, col2 = st.columns(2)
 
     with col1:
         st.subheader("Impact Visualization")
-        st.metric(label="Original Probability", value=f"{BASELINE_PROBABILITY * 100:.1f}%")
+        st.metric(label="Original Probability", value=f"{baseline_probability * 100:.1f}%")
         st.metric(
             label="Projected Probability",
             value=f"{new_probability * 100:.1f}%",
@@ -384,22 +278,16 @@ from lightgbm import LGBMRegressor
 def estimate_price_elasticity(
     df: pd.DataFrame, y_col: str, d_col: str, x_cols: list[str], n_folds: int, random_seed: int
 ) -> DoubleMLPLR:
-    """
-    Executes Double/Debiased Machine Learning (PLR) to estimate unbiased price elasticity.
-    Utilizes cross-fitting to partial out the high-dimensional confounding vector.
-    """
-    # 1. Bind dataframe to mathematical roles
     dml_data = DoubleMLData(df, y_col=y_col, d_cols=d_col, x_cols=x_cols)
 
-    # 2. Instantiate flexible machine learning estimators for nuisance parameters
-    ml_l = LGBMRegressor(n_estimators=3, random_state=random_seed)
-    ml_m = LGBMRegressor(n_estimators=3, random_state=random_seed)
+    # n_estimators raised from 3 -> 300 (with shrinkage) so the nuisance learners can
+    # actually approach the true conditional expectations rather than underfitting.
+    ml_l = LGBMRegressor(n_estimators=300, learning_rate=0.05, random_state=random_seed)
+    ml_m = LGBMRegressor(n_estimators=300, learning_rate=0.05, random_state=random_seed)
 
-    # 3. Construct and fit the Partially Linear Regression model
     dml_plr = DoubleMLPLR(
         obj_dml_data=dml_data, ml_l=ml_l, ml_m=ml_m, n_folds=n_folds, score="partialling out"
     )
-
     dml_plr.fit()
     return dml_plr
 
@@ -420,6 +308,53 @@ def evaluate_robustness(dml_model: DoubleMLPLR, cf_y: float = 0.05, cf_d: float 
         f"Hypothetical unobserved confounder explaining {cf_y * 100}% variance in Y and {cf_d * 100}% in D."
     )
     print(dml_model.sensitivity_summary)
+</file>
+<file path="src/causal_inference/services/__init__.py">
+# Initialize services package
+</file>
+<file path="src/causal_inference/services/artifact_manager.py">
+import json
+from pathlib import Path
+
+
+def save_metrics(
+    marginal_effect: float, p_value: float, baseline_prob: float, filepath: str
+) -> None:
+    """
+    Serializes pipeline telemetry and causal metrics to a persistent JSON artifact.
+    """
+    out_path = Path(filepath)
+
+    # Enforce directory existence prior to file generation
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    payload = {
+        "marginal_effect": marginal_effect,
+        "p_value": p_value,
+        "baseline_prob": baseline_prob,
+    }
+
+    # Utilizing Path.write_text to comply with Ruff PTH123 rule
+    out_path.write_text(json.dumps(payload, indent=4), encoding="utf-8")
+
+
+def load_metrics(filepath: str) -> dict[str, float]:
+    """
+    Deserializes causal inference metrics from the disk artifact.
+    """
+    in_path = Path(filepath)
+
+    if not in_path.exists():
+        raise FileNotFoundError(f"Artifact not found at {filepath}. Run the pipeline first.")
+
+    data = json.loads(in_path.read_text(encoding="utf-8"))
+
+    # Explicit type return to satisfy strict MyPy evaluation
+    return {
+        "marginal_effect": float(data["marginal_effect"]),
+        "p_value": float(data["p_value"]),
+        "baseline_prob": float(data["baseline_prob"]),
+    }
 </file>
 <file path="src/causal_inference/services/data_ingestion.py">
 from pathlib import Path
@@ -445,27 +380,21 @@ def partition_causal_roles(df: pd.DataFrame) -> tuple[pd.DataFrame, str, str, li
     Translates the ISLR Orange Juice dataframe into structured causal roles.
     Isolates the target outcome, treatment variable, and high-dimensional confounders.
     """
-    # Create a clean working copy to avoid SettingWithCopy warnings
     processed_df = df.copy()
-
-    # Transform categorical outcome into a binary numerical indicator (1 = CH, 0 = MM)
     processed_df["Purchase_CH"] = (processed_df["Purchase"] == "CH").astype(int)
 
-    # Define the Causal Graph nodes
-    y_col = "Purchase_CH"  # Outcome (Y): Probability of purchasing Citrus Hill
-    d_col = "SalePriceCH"  # Treatment (D): The actual price paid for Citrus Hill
+    y_col = "Purchase_CH"
+    d_col = "SalePriceCH"
 
-    # Define the Confounding Adjustment Set (X)
-    # We must control for loyalty, baseline prices, competitor final prices, and promotions.
+    # PriceCH and SpecialCH deliberately EXCLUDED: SalePriceCH = PriceCH - (promo discount
+    # implied by SpecialCH), so conditioning on them induces perfect collinearity with the
+    # treatment and destroys the exogenous variance the orthogonal score requires.
     x_cols = [
-        "LoyalCH",  # Customer's historical loyalty to CH
-        "PriceCH",  # Baseline list price of CH
-        "SpecialCH",  # Indicator of a CH promotion
-        "SalePriceMM",  # Actual sale price of competitor (Minute Maid)
-        "PriceMM",  # Baseline list price of MM
-        "SpecialMM",  # Indicator of a MM promotion
+        "LoyalCH",
+        "SalePriceMM",
+        "PriceMM",
+        "SpecialMM",
     ]
-
     return processed_df, y_col, d_col, x_cols
 </file>
 <file path="src/causal_inference/__init__.py">
@@ -489,6 +418,7 @@ class Config:
     """
 
     data_path: str = os.getenv("DATA_PATH", "data/raw/oj_data.csv")
+    artifact_path: str = os.getenv("ARTIFACT_PATH", "data/processed/model_metrics.json")
     n_folds: int = int(os.getenv("N_FOLDS", "5"))
     random_seed: int = int(os.getenv("RANDOM_SEED", "42"))
 
@@ -498,6 +428,7 @@ config = Config()
 <file path="src/causal_inference/main.py">
 from causal_inference.config import config
 from causal_inference.core.dml_engine import estimate_price_elasticity, evaluate_robustness
+from causal_inference.services.artifact_manager import save_metrics
 from causal_inference.services.data_ingestion import (
     fetch_observational_data,
     partition_causal_roles,
@@ -514,10 +445,14 @@ def main() -> None:
     raw_df = fetch_observational_data(config.data_path)
     df, y_col, d_col, x_cols = partition_causal_roles(raw_df)
 
+    # Dynamically calculate the baseline probability (mean of binary outcome)
+    baseline_prob = float(df[y_col].mean())
+
     print(f"Data successfully parsed. Confounders detected: {len(x_cols)}")
+    print(f"Baseline Purchase Probability: {baseline_prob:.4f}")
     print("Executing Double Machine Learning (PLR) cross-fitting sequence...")
 
-    # Execute orthogonal estimation (Logic remains unchanged)
+    # Execute orthogonal estimation
     dml_model = estimate_price_elasticity(
         df=df,
         y_col=y_col,
@@ -528,8 +463,8 @@ def main() -> None:
     )
 
     # Synthesize causal findings
-    marginal_effect = dml_model.coef[0]
-    p_value = dml_model.pval[0]
+    marginal_effect = float(dml_model.coef[0])
+    p_value = float(dml_model.pval[0])
 
     print("-" * 50)
     print("CAUSAL IDENTIFICATION RESULTS")
@@ -549,8 +484,18 @@ def main() -> None:
     print("\nModel Statistical Summary:")
     print(dml_model.summary)
 
-    # NEW: Execute Phase 9 Robustness Check
+    # Execute Phase 9 Robustness Check
     evaluate_robustness(dml_model=dml_model, cf_y=0.05, cf_d=0.05)
+
+    # Persist metrics for frontend consumption
+    print(f"\nSerializing artifacts to {config.artifact_path}...")
+    save_metrics(
+        marginal_effect=marginal_effect,
+        p_value=p_value,
+        baseline_prob=baseline_prob,
+        filepath=config.artifact_path,
+    )
+    print("Pipeline execution complete.")
 
 
 if __name__ == "__main__":
@@ -558,6 +503,55 @@ if __name__ == "__main__":
 </file>
 <file path="src/causal_inference/py.typed">
 [error reading file]
+</file>
+<file path="tests/unit/test_artifact_manager.py">
+from pathlib import Path
+
+import pytest
+
+from causal_inference.services.artifact_manager import load_metrics, save_metrics
+
+
+def test_save_and_load_metrics(tmp_path: Path) -> None:
+    """
+    Validates the JSON serialization and deserialization lifecycle.
+    Utilizes tmp_path to ensure strict environment isolation.
+    """
+    # 1. Setup mock environment
+    target_file = tmp_path / "mock_dir" / "metrics.json"
+
+    mock_marginal = -0.450
+    mock_p_value = 0.001
+    mock_baseline = 0.650
+
+    # 2. Execute save function (Should automatically resolve missing parent directories)
+    save_metrics(
+        marginal_effect=mock_marginal,
+        p_value=mock_p_value,
+        baseline_prob=mock_baseline,
+        filepath=str(target_file),
+    )
+
+    # 3. Assert file generation
+    assert target_file.exists()
+
+    # 4. Execute load function
+    loaded_data = load_metrics(str(target_file))
+
+    # 5. Assert data parity
+    assert loaded_data["marginal_effect"] == mock_marginal
+    assert loaded_data["p_value"] == mock_p_value
+    assert loaded_data["baseline_prob"] == mock_baseline
+
+
+def test_load_metrics_file_not_found(tmp_path: Path) -> None:
+    """
+    Validates that attempting to load a non-existent artifact triggers the expected exception.
+    """
+    missing_file = tmp_path / "does_not_exist.json"
+
+    with pytest.raises(FileNotFoundError):
+        load_metrics(str(missing_file))
 </file>
 <file path="tests/unit/test_data_ingestion.py">
 import pandas as pd
@@ -585,448 +579,11 @@ def test_partition_causal_roles() -> None:
 
     # 2. Execute the function
     processed_df, y_col, d_col, x_cols = partition_causal_roles(df)
-
-    # 3. Assert causal roles are assigned correctly
     assert y_col == "Purchase_CH"
     assert d_col == "SalePriceCH"
-    assert len(x_cols) == 6
-
-    # 4. Assert categorical transformation was successful (CH=1, MM=0)
-    assert processed_df["Purchase_CH"].tolist() == [1, 0, 1]
-</file>
-<file path="tests/conftest.py">
-[error reading file]
-</file>
-<file path="DEVELOPER_INSTRUCTION.md">
-# Developer Operations & Onboarding Guide
-
-Welcome to the standard analytical architecture. This project uses strict Git isolation, the `src/` layout, and `uv` to guarantee that your development environment is bit-for-bit identical to the production runner. 
-
-## 1. Getting Started
-Do not use `pip`, `poetry`, or `virtualenv`. Do not manually run `source .venv/bin/activate`. 
-
-* **Initialize the environment:** Running `uv sync` or any `uv run` command automatically detects the `pyproject.toml`, fetches the pinned Python 3.12.4 runtime, resolves the `uv.lock` file, and provisions a hidden `.venv` directory.
-* **Running Code:** Always prefix your execution with `uv run`. This dynamically injects the virtual environment into the sub-shell.
-    * *Correct:* `uv run python src/causal_inference/main.py`
-    * *Incorrect:* `python src/causal_inference/main.py`
-* **Environment Variables:** Create a `.env` file at the root containing `DATABASE_URL` and `ENVIRONMENT=development`. Load it directly via: `uv run --env-file .env python src/causal_inference/main.py`.
-
-## 2. Developing & Updating Code
-We enforce strict, declarative code standards. Unused imports, missing types, and legacy syntax will instantly fail CI builds.
-
-* **Formatting (Ruff):** Formats to a 100-character line length and enforces double quotes.
-    * *Command:* `make format` (Executes `uv run ruff format .`)
-* **Linting (Ruff):** Validates against aggressive standards including flake8-bugbear, comprehensions, and implicit string concatenations. 
-    * *Command:* `make check` (Executes `uv run ruff check .`)
-    * *Auto-fix:* Run `uv run ruff check . --fix` to resolve standard library import sorting and legacy syntax automatically.
-* **Type Checking (MyPy):** The `src/` directory is strictly typed.
-    * *Command:* `make typecheck` (Executes `uv run mypy src/`)
-* **Adding Dependencies:** * *Production package:* `uv add <package>` (Updates `pyproject.toml` and locks `uv.lock`).
-    * *Development package:* `uv add --dev <package>` (Isolates toolchains like `pytest` from production containers).
-
-## 3. Troubleshooting Matrix
-
-| Symptom | Root Cause | Resolution |
-| :--- | :--- | :--- |
-| **`ModuleNotFoundError` during `pytest`** | You are executing tests without `uv run`, causing the test suite to miss the `src/` installation mapping. | Execute tests strictly via `make test` or `uv run pytest tests/`. |
-| **Import shadowing / Local code ignored** | You placed a Python file at the repository root. The `src/` layout is mandated precisely to prevent root-level `sys.path` injection. | Move all business logic into `src/causal_inference/`. Keep the root strictly for metadata (`.env`, `pyproject.toml`). |
-| **CI build fails on Ruff `TID` or `S` rules** | You used a relative import (e.g., `from ..utils import X`) or an insecure library (e.g., `xml.etree`). | Refactor to absolute imports (`from causal_inference.utils import X`). Replace insecure libraries as dictated by the Ruff security linter. |
-| **MyPy complains about missing `py.typed`** | A new library or local module isn't exposing its type hints to the daemon. | Ensure `src/causal_inference/py.typed` remains intact. If a third-party library is untyped, add `# type: ignore` locally or install its stub package. |
-| **Sudden environment corruption** | Edge case caching error or cross-contamination from a manual `.venv` modification. | Because `uv` is incredibly fast, safely nuke the cache: Delete `.venv/`, then run `uv sync`. It will rebuild perfectly in milliseconds. |
-</file>
-<file path="pyproject.toml">
-[project]
-name = "causal_inference"
-version = "0.1.0"
-description = "Causal Inference and Price Elasticity Optimization via Double Machine Learning"
-readme = "README.md"
-requires-python = ">=3.12.4"
-dependencies = [
-    "doubleml>=0.11.3",
-    "lightgbm>=4.6.0",
-    "pandas>=3.0.3",
-    "python-dotenv>=1.2.2",
-    "scikit-learn>=1.9.0",
-    "streamlit>=1.59.1",
-]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.ruff]
-line-length = 100
-target-version = "py312"
-
-[tool.ruff.format]
-docstring-code-format = true
-quote-style = "double"
-
-[tool.ruff.lint]
-# Extending with strict analysis boundaries
-extend-select = ["E", "W", "F", "I", "UP", "B", "C4", "FA", "ISC", "SIM", "TID", "PTH", "TC", "S"]
-ignore = ["E501"]
-fixable = ["ALL"]
-
-[tool.mypy]
-strict = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-warn_return_any = true
-
-[dependency-groups]
-dev = [
-    "mypy>=2.2.0",
-    "pytest>=9.1.1",
-    "ruff>=0.15.21",
-    "pandas-stubs>=2.2.2",
-]
-
-[[tool.mypy.overrides]]
-module = [
-    "doubleml.*",
-    "lightgbm.*",
-]
-ignore_missing_imports = true
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101"]
-</file>
-<file path="README.md">
-# Causal Inference & Price Elasticity Optimization
-
-## Overview
-This repository implements an advanced econometrics pipeline utilizing Double Machine Learning (DML) to isolate the true causal effect of pricing interventions. By leveraging Partially Linear Regression and cross-fitting, this model resolves confounding variables (e.g., seasonality, competitor actions) inherent in high-dimensional retail data (Orange Juice dataset).
-
-The core parameter estimated is the price elasticity of demand:
-$$\theta_0 = \frac{\partial q / q}{\partial p / p}$$
-
-## Architecture
-Built on a strict, modern enterprise standard:
-* **Environment & Lockfile:** Managed deterministically via `uv` (Rust-based).
-* **Layout:** Enforces the `src/` layout to prevent `sys.path` shadowing and ensure test isolation.
-* **Static Analysis:** Linting and formatting via `Ruff`; static type checking via `MyPy`.
-
-## Directory Structure
-```text
-causal_inference/
-├── .env                 # Local variables (gitignored)
-├── pyproject.toml       # Declarative configuration
-├── uv.lock              # Deterministic dependency graph
-├── Makefile             # Orchestration commands
-├── src/causal_inference/
-│   ├── core/            # Pure math & DML models (dml_engine.py)
-│   ├── services/        # Side-effects & ingestion (data_ingestion.py)
-│   ├── main.py          # Pipeline entry point
-│   └── config.py        # Environment validation
-├── tests/               # Pytest suite
-└── data/                # Segmented data (raw/ & processed/)
-
-```
-
-## Quick Start
-
-This project requires **Python 3.12.4** and **uv**. DO NOT manually activate virtual environments.
-
-1. **Install uv:** `curl -LsSf https://astral.sh/uv/install.sh | sh`
-2. **Clone & Sync:** ```bash
-git clone <repo_url> && cd causal_inference
-uv sync
-```
-
-```
-
-
-3. **Execute Pipeline:**
-```bash
-uv run --env-file .env python src/causal_inference/main.py
-
-# For streamlit
-uv run streamlit run src/causal_inference/api/app.py
-```
-
-
-4. **Validate Code:**
-```bash
-make format && make check && make typecheck
-
-```
-</file>
-</file>
-<file path="src/causal_inference/api/app.py">
-import streamlit as st
-
-# TODO: Hard coded constants. Modify so that values change when dml_engine change. Some solution to this.
-# Constant derived from causal pipeline execution
-ELASTICITY_THETA = -0.4699
-BASELINE_PROBABILITY = 0.60  # Example baseline for the CH product
-
-
-def run_dashboard() -> None:
-    st.set_page_config(page_title="Causal Pricing Simulator", layout="wide")
-
-    st.title("📈 Causal Pricing AI: Scenario Simulator")
-    st.markdown(f"""
-    **Model Status:** Production-Ready  
-    **Estimated Price Elasticity ($\theta_0$):** `{ELASTICITY_THETA}`  
-    *Interpretation: A $1.00 increase in price changes purchase probability by ~46.99 percentage points.*
-    """)
-
-    st.divider()
-
-    # Sidebar for Scenario Inputs
-    st.sidebar.header("Scenario Configuration")
-    price_change = st.sidebar.slider(
-        "Hypothetical Price Increase ($)", min_value=-1.0, max_value=2.0, value=0.5, step=0.1
-    )
-
-    # Calculation logic
-    # Linear approximation for probability change: ΔP ≈ θ * ΔPrice
-    prob_impact = ELASTICITY_THETA * price_change
-    new_probability = max(0.0, min(1.0, BASELINE_PROBABILITY + prob_impact))
-
-    # Main UI Layout
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("Impact Visualization")
-        st.metric(label="Original Probability", value=f"{BASELINE_PROBABILITY * 100:.1f}%")
-        st.metric(
-            label="Projected Probability",
-            value=f"{new_probability * 100:.1f}%",
-            delta=f"{prob_impact * 100:.2f} pp",
-        )
-
-    with col2:
-        st.subheader("Business Insight")
-        if prob_impact < -0.20:
-            st.error("⚠️ Significant risk of customer churn for Citrus Hill.")
-        elif prob_impact > 0.05:
-            st.success("✅ Price increase likely to improve margins without drastic volume loss.")
-        else:
-            st.warning("⚠️ Neutral impact; monitor competitive response.")
-
-
-if __name__ == "__main__":
-    run_dashboard()
-</file>
-<file path="src/causal_inference/core/dml_engine.py">
-import pandas as pd
-from doubleml import DoubleMLData, DoubleMLPLR
-from lightgbm import LGBMRegressor
-
-
-def estimate_price_elasticity(
-    df: pd.DataFrame, y_col: str, d_col: str, x_cols: list[str], n_folds: int, random_seed: int
-) -> DoubleMLPLR:
-    """
-    Executes Double/Debiased Machine Learning (PLR) to estimate unbiased price elasticity.
-    Utilizes cross-fitting to partial out the high-dimensional confounding vector.
-    """
-    # 1. Bind dataframe to mathematical roles
-    dml_data = DoubleMLData(df, y_col=y_col, d_cols=d_col, x_cols=x_cols)
-
-    # 2. Instantiate flexible machine learning estimators for nuisance parameters
-    ml_l = LGBMRegressor(n_estimators=3, random_state=random_seed)
-    ml_m = LGBMRegressor(n_estimators=3, random_state=random_seed)
-
-    # 3. Construct and fit the Partially Linear Regression model
-    dml_plr = DoubleMLPLR(
-        obj_dml_data=dml_data, ml_l=ml_l, ml_m=ml_m, n_folds=n_folds, score="partialling out"
-    )
-
-    dml_plr.fit()
-    return dml_plr
-
-
-def evaluate_robustness(dml_model: DoubleMLPLR, cf_y: float = 0.05, cf_d: float = 0.05) -> None:
-    """
-    Executes Phase 9: Robustness and Sensitivity Analysis.
-    Calculates bounds by simulating an unobserved confounder that explains a
-    certain percentage of residual variance in both the outcome (cf_y) and treatment (cf_d).
-    """
-    # Execute the sensitivity analysis using Omitted Variable Bias (OVB) bounds
-    dml_model.sensitivity_analysis(cf_y=cf_y, cf_d=cf_d, rho=1.0)
-
-    print("-" * 50)
-    print("SENSITIVITY ANALYSIS (OMITTED VARIABLE BIAS)")
-    print("-" * 50)
-    print(
-        f"Hypothetical unobserved confounder explaining {cf_y * 100}% variance in Y and {cf_d * 100}% in D."
-    )
-    print(dml_model.sensitivity_summary)
-</file>
-<file path="src/causal_inference/services/data_ingestion.py">
-from pathlib import Path
-
-import pandas as pd
-
-
-def fetch_observational_data(file_path: str) -> pd.DataFrame:
-    """
-    Retrieves the raw observational dataset.
-    Assuming the file is placed locally based on the provided configuration path.
-    """
-    if not Path(file_path).exists():
-        raise FileNotFoundError(
-            f"Dataset not found at {file_path}. Please ensure oj_data.csv is present."
-        )
-
-    return pd.read_csv(file_path)
-
-
-def partition_causal_roles(df: pd.DataFrame) -> tuple[pd.DataFrame, str, str, list[str]]:
-    """
-    Translates the ISLR Orange Juice dataframe into structured causal roles.
-    Isolates the target outcome, treatment variable, and high-dimensional confounders.
-    """
-    # Create a clean working copy to avoid SettingWithCopy warnings
-    processed_df = df.copy()
-
-    # Transform categorical outcome into a binary numerical indicator (1 = CH, 0 = MM)
-    processed_df["Purchase_CH"] = (processed_df["Purchase"] == "CH").astype(int)
-
-    # Define the Causal Graph nodes
-    y_col = "Purchase_CH"  # Outcome (Y): Probability of purchasing Citrus Hill
-    d_col = "SalePriceCH"  # Treatment (D): The actual price paid for Citrus Hill
-
-    # Define the Confounding Adjustment Set (X)
-    # We must control for loyalty, baseline prices, competitor final prices, and promotions.
-    x_cols = [
-        "LoyalCH",  # Customer's historical loyalty to CH
-        "PriceCH",  # Baseline list price of CH
-        "SpecialCH",  # Indicator of a CH promotion
-        "SalePriceMM",  # Actual sale price of competitor (Minute Maid)
-        "PriceMM",  # Baseline list price of MM
-        "SpecialMM",  # Indicator of a MM promotion
-    ]
-
-    return processed_df, y_col, d_col, x_cols
-</file>
-<file path="src/causal_inference/config.py">
-import os
-from dataclasses import dataclass
-
-from dotenv import load_dotenv
-
-# Execute environment variable injection
-load_dotenv()
-
-
-@dataclass(frozen=True)
-class Config:
-    """
-    Centralized configuration mapping for the causal inference pipeline.
-    Validates and types parameters injected from the environment.
-    """
-
-    data_path: str = os.getenv("DATA_PATH", "data/raw/oj_data.csv")
-    n_folds: int = int(os.getenv("N_FOLDS", "5"))
-    random_seed: int = int(os.getenv("RANDOM_SEED", "42"))
-
-
-config = Config()
-</file>
-<file path="src/causal_inference/main.py">
-from causal_inference.config import config
-from causal_inference.core.dml_engine import estimate_price_elasticity, evaluate_robustness
-from causal_inference.services.data_ingestion import (
-    fetch_observational_data,
-    partition_causal_roles,
-)
-
-
-def main() -> None:
-    """
-    Primary orchestrator for the causal inference lifecycle.
-    """
-    print("Initiating deterministic causal inference pipeline...")
-
-    # Extract and format the unconfounded matrix
-    raw_df = fetch_observational_data(config.data_path)
-    df, y_col, d_col, x_cols = partition_causal_roles(raw_df)
-
-    print(f"Data successfully parsed. Confounders detected: {len(x_cols)}")
-    print("Executing Double Machine Learning (PLR) cross-fitting sequence...")
-
-    # Execute orthogonal estimation (Logic remains unchanged)
-    dml_model = estimate_price_elasticity(
-        df=df,
-        y_col=y_col,
-        d_col=d_col,
-        x_cols=x_cols,
-        n_folds=config.n_folds,
-        random_seed=config.random_seed,
-    )
-
-    # Synthesize causal findings
-    marginal_effect = dml_model.coef[0]
-    p_value = dml_model.pval[0]
-
-    print("-" * 50)
-    print("CAUSAL IDENTIFICATION RESULTS")
-    print("-" * 50)
-    print(f"Treatment Variable (D): {d_col}")
-    print(f"Outcome Variable (Y)  : {y_col}")
-    print(f"\nMarginal Effect (θ₀)  : {marginal_effect:.4f}")
-    print(f"P-Value               : {p_value:.4e}")
-
-    print("\nInterpretation:")
-    print(
-        f"A $1.00 increase in {d_col} changes the probability of purchasing "
-        f"Citrus Hill by approximately {marginal_effect * 100:.2f} percentage points, "
-        "holding brand loyalty and competitor pricing constant."
-    )
-
-    print("\nModel Statistical Summary:")
-    print(dml_model.summary)
-
-    # NEW: Execute Phase 9 Robustness Check
-    evaluate_robustness(dml_model=dml_model, cf_y=0.05, cf_d=0.05)
-
-
-if __name__ == "__main__":
-    main()
-</file>
-<file path="src/causal_inference/py.typed">
-[error reading file]
-</file>
-<file path="src/causal_inference/__init__.py">
-[error reading file]
-</file>
-<file path="tests/unit/test_data_ingestion.py">
-import pandas as pd
-
-from causal_inference.services.data_ingestion import partition_causal_roles
-
-
-def test_partition_causal_roles() -> None:
-    """
-    Validates that the data ingestion module correctly transforms the categorical
-    outcome and separates the DAG roles (Y, D, X).
-    """
-    # 1. Setup mock data simulating the oj_data.csv schema
-    mock_data = {
-        "Purchase": ["CH", "MM", "CH"],
-        "SalePriceCH": [1.75, 1.69, 1.99],
-        "LoyalCH": [0.5, 0.4, 0.9],
-        "PriceCH": [1.75, 1.69, 1.99],
-        "SpecialCH": [0, 0, 1],
-        "SalePriceMM": [1.99, 1.69, 1.59],
-        "PriceMM": [1.99, 1.69, 1.99],
-        "SpecialMM": [0, 0, 1],
-    }
-    df = pd.DataFrame(mock_data)
-
-    # 2. Execute the function
-    processed_df, y_col, d_col, x_cols = partition_causal_roles(df)
-
-    # 3. Assert causal roles are assigned correctly
-    assert y_col == "Purchase_CH"
-    assert d_col == "SalePriceCH"
-    assert len(x_cols) == 6
-
-    # 4. Assert categorical transformation was successful (CH=1, MM=0)
+    assert len(x_cols) == 4  # PriceCH, SpecialCH deliberately excluded (see data_ingestion.py)
+    assert "PriceCH" not in x_cols
+    assert "SpecialCH" not in x_cols
     assert processed_df["Purchase_CH"].tolist() == [1, 0, 1]
 </file>
 <file path="tests/conftest.py">
@@ -1070,7 +627,7 @@ We enforce strict, declarative code standards. Unused imports, missing types, an
 | **Sudden environment corruption** | Edge case caching error or cross-contamination from a manual `.venv` modification. | Because `uv` is incredibly fast, safely nuke the cache: Delete `.venv/`, then run `uv sync`. It will rebuild perfectly in milliseconds. |
 </file>
 <file path="Makefile">
-.PHONY: check format typecheck test
+.PHONY: check format typecheck test run-pipeline run-app run-all
 
 check:
 	uv run ruff check . --fix
@@ -1083,6 +640,14 @@ typecheck:
 
 test:
 	uv run pytest tests/ -v
+
+run-pipeline:
+	uv run --env-file .env python src/causal_inference/main.py
+
+run-app:
+	uv run --env-file .env streamlit run src/causal_inference/api/app.py
+
+run-all: run-pipeline run-app
 
 all: format check typecheck test
 </file>
@@ -1203,5 +768,22 @@ uv run streamlit run src/causal_inference/api/app.py
 make format && make check && make typecheck
 
 ```
+
+## Known Limitations
+
+- **Linear Probability Model on a binary outcome.** The outcome (`Purchase_CH`) is binary,
+  but this pipeline fits a Partially Linear Regression, which is additive and unconstrained
+  to [0, 1]. This is why the dashboard (`app.py`) must manually clip projected probabilities
+  to a valid range. A production version should use a Logistic PLR or an Interactive
+  Regression Model designed for binary treatment/outcome effects.
+- **Sensitivity analysis bounds are illustrative, not benchmarked.** `evaluate_robustness`
+  uses fixed `cf_y=0.05, cf_d=0.05` values. These are not derived from the explanatory power
+  of observed covariates (e.g. `LoyalCH`) and should not be read as a rigorous bound on
+  omitted variable bias.
+- **No hyperparameter tuning.** `LGBMRegressor` settings (`n_estimators`, `learning_rate`)
+  are fixed, not cross-validated. Residual confounding bias may remain if the nuisance
+  models' out-of-sample fit is suboptimal.
+- no naive (OLS/logistic) baseline
+- no out-of-sample nuisance-model diagnostic
 </file>
 
