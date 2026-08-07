@@ -1,4 +1,4 @@
-<project_tree>
+﻿<project_tree>
 causal_inference
 +-- scripts
 |   +-- CopyProjectStructure.ps1
@@ -12,14 +12,14 @@ causal_inference
 |       +-- core
 |       |   \-- dml_engine.py
 |       +-- services
-|       |   +-- __init__.py
 |       |   +-- artifact_manager.py
-|       |   \-- data_ingestion.py
+|       |   +-- data_ingestion.py
+|       |   \-- __init__.py
 |       +-- utils
-|       +-- __init__.py
 |       +-- config.py
 |       +-- main.py
-|       \-- py.typed
+|       +-- py.typed
+|       \-- __init__.py
 +-- tests
 |   +-- integration
 |   +-- unit
@@ -309,9 +309,6 @@ def evaluate_robustness(dml_model: DoubleMLPLR, cf_y: float = 0.05, cf_d: float 
     )
     print(dml_model.sensitivity_summary)
 </file>
-<file path="src/causal_inference/services/__init__.py">
-# Initialize services package
-</file>
 <file path="src/causal_inference/services/artifact_manager.py">
 import json
 from pathlib import Path
@@ -397,8 +394,8 @@ def partition_causal_roles(df: pd.DataFrame) -> tuple[pd.DataFrame, str, str, li
     ]
     return processed_df, y_col, d_col, x_cols
 </file>
-<file path="src/causal_inference/__init__.py">
-[error reading file]
+<file path="src/causal_inference/services/__init__.py">
+# Initialize services package
 </file>
 <file path="src/causal_inference/config.py">
 import os
@@ -502,6 +499,9 @@ if __name__ == "__main__":
     main()
 </file>
 <file path="src/causal_inference/py.typed">
+[error reading file]
+</file>
+<file path="src/causal_inference/__init__.py">
 [error reading file]
 </file>
 <file path="tests/unit/test_artifact_manager.py">

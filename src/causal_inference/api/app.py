@@ -4,11 +4,9 @@ from causal_inference.config import config
 from causal_inference.services.artifact_manager import load_metrics
 
 
-@st.cache_data
 def fetch_pipeline_artifacts() -> dict[str, float]:
     """
     Retrieves the serialized metrics from disk.
-    Decorated with cache_data to prevent repetitive disk I/O on widget interaction.
     """
     try:
         return load_metrics(config.artifact_path)
@@ -25,14 +23,14 @@ def run_dashboard() -> None:
 
     # Ingest dynamic metrics
     metrics = fetch_pipeline_artifacts()
-    elasticity_theta = metrics["marginal_effect"]
+    marginal_effect = metrics["marginal_effect"]
     baseline_probability = metrics["baseline_prob"]
 
     st.title("📈 Causal Pricing AI: Scenario Simulator")
     st.markdown(
         "**Model Status:** Production-Ready\n\n"
-        f"**Estimated Price Elasticity ($\\theta_0$):** `{elasticity_theta:.4f}`\n\n"
-        f"*Interpretation: A $1.00 increase in price changes purchase probability by ~{elasticity_theta * 100:.2f} percentage points.*"
+        f"**Estimated Marginal Effect ($\\theta_0$):** `{marginal_effect:.4f}`\n\n"
+        f"*Interpretation: A $1.00 increase in price changes purchase probability by ~{marginal_effect * 100:.2f} percentage points.*"
     )
 
     st.divider()
@@ -45,7 +43,7 @@ def run_dashboard() -> None:
 
     # Calculation logic
     # Linear approximation for probability change: ΔP ≈ θ * ΔPrice
-    prob_impact = elasticity_theta * price_change
+    prob_impact = marginal_effect * price_change
     new_probability = max(0.0, min(1.0, baseline_probability + prob_impact))
 
     # Main UI Layout
@@ -65,7 +63,7 @@ def run_dashboard() -> None:
         if prob_impact < -0.20:
             st.error("⚠️ Significant risk of customer churn for Citrus Hill.")
         elif prob_impact > 0.05:
-            st.success("✅ Price increase likely to improve margins without drastic volume loss.")
+            st.success("✅ Scenario likely to yield a favorable volume response.")
         else:
             st.warning("⚠️ Neutral impact; monitor competitive response.")
 
