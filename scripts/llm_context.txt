@@ -708,85 +708,65 @@ ignore_missing_imports = true
 "tests/**/*.py" = ["S101"]
 </file>
 <file path="README.md">
-# Causal Inference & Price Optimization Pipeline
+# Causal Pricing Intelligence Pipeline
 
-## Overview
+A production-minded analytical pipeline that isolates the true causal effect of price on purchase behavior — separating genuine demand response from confounding noise like brand loyalty and competitor pricing — to support data-driven pricing decisions.
 
-This repository implements an econometrics pipeline utilizing Double Machine Learning (DML) to isolate the true causal effect of pricing interventions. By leveraging a Partially Linear Regression (PLR) model and K-fold cross-fitting, the pipeline strips away high-dimensional confounding variables (e.g., competitor pricing, brand loyalty) to uncover unbiased causal estimates from observational retail data.
+> [!NOTE]
+> **Screenshot placeholder:** add a screenshot of the Streamlit scenario simulator here, e.g. `![Scenario Simulator Dashboard](docs/images/dashboard.png)`
 
-The core parameter estimated is the **Marginal Effect** of price on demand:
+## Overview & Impact
 
-$$\theta_0 = \frac{\partial \mathbb{P}(\text{Purchase}=1)}{\partial \text{Price}}$$
+- **Causal, not just correlational, insight:** Uses Double Machine Learning (DML) with a Partially Linear Regression (PLR) specification to estimate the unbiased marginal effect of price on purchase probability, controlling for high-dimensional confounders.
+- **Deconfounding at scale:** K-fold cross-fitting with gradient-boosted nuisance models strips out the influence of variables like customer loyalty and competitor pricing that would otherwise bias a naive regression.
+- **Decision-ready output:** Estimates feed a live scenario simulator so stakeholders can test hypothetical price changes and see projected impact on purchase probability and churn risk in real time.
+- **Built-in model scrutiny:** Includes an omitted-variable-bias sensitivity analysis to quantify how robust the causal estimate is to unobserved confounding — not just a point estimate taken at face value.
 
-## Architecture
+## Tech Stack
 
-Built on a strict, modern Python enterprise standard:
+`Python 3.12`, `DoubleML`, `LightGBM`, `pandas`, `scikit-learn`, `Streamlit`, `python-dotenv`, `uv`, `Ruff`, `MyPy`, `Pytest`
 
-- **Environment & Lockfile:** Managed deterministically via `uv` (Rust-based).
-- **Layout:** Enforces the `src/` layout to prevent `sys.path` shadowing and ensure strict testing boundaries.
-- **Static Analysis:** Aggressive linting and formatting via `Ruff`; strict static type checking via `MyPy`.
+## Engineering Rigor
 
-## Directory Structure
-
-```text
-causal_inference/
-├── .env                 # Local variables (gitignored)
-├── pyproject.toml       # Declarative configuration
-├── uv.lock              # Deterministic dependency graph
-├── Makefile              # Orchestration commands
-├── src/causal_inference/
-│   ├── core/            # Pure math & DML models (dml_engine.py)
-│   ├── services/        # Side-effects & ingestion (data_ingestion.py)
-│   ├── main.py          # Pipeline entry point
-│   └── config.py        # Environment validation
-├── tests/               # Pytest suite
-└── data/                # Segmented data (raw/ & processed/)
-```
+- **Deterministic environments:** Dependency resolution and virtual environments are fully locked and reproducible via `uv` and `uv.lock` — no ambient `pip`/`virtualenv` drift between machines.
+- **Strict static analysis:** Aggressive `Ruff` linting (bugbear, security, import hygiene) and `MyPy --strict` type checking enforced across the `src/` layout, backed by a `py.typed` marker for downstream type consumers.
+- **Isolated automated testing:** A `Pytest` suite with fixture-based isolation (`tmp_path`) covers core services, orchestrated via a single `make test` / `make all` entry point suitable for CI.
 
 ## Quick Start
 
-This project requires **Python 3.12+** and **uv**. The virtual environment is provisioned and managed automatically; do not manually activate virtual environments.
+```bash
+# 1. Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-1. **Install uv:**
+# 2. Clone and sync the locked environment
+git clone <repo_url> && cd causal_inference
+uv sync
 
-   ```bash
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   ```
+# 3. Run the pipeline, then launch the dashboard
+uv run --env-file .env python src/causal_inference/main.py
+uv run streamlit run src/causal_inference/api/app.py
+```
 
-2. **Clone & Sync:**
+## Project Architecture
 
-   ```bash
-   git clone <repo_url> && cd causal_inference
-   uv sync
-   ```
+**Ingestion → Causal Modeling → Artifact Persistence → UI**
 
-3. **Execute Pipeline:**
+```
+src/causal_inference/
+├── services/    # Data ingestion & causal-role partitioning (Y / D / X)
+├── core/        # DML/PLR estimation engine + sensitivity analysis
+├── services/    # Artifact (metrics) serialization to JSON
+├── api/         # Streamlit scenario-simulator dashboard
+├── config.py    # Environment-driven configuration
+└── main.py      # Pipeline orchestrator
+```
 
-   ```bash
-   uv run --env-file .env python src/causal_inference/main.py
+Raw observational data is ingested and split into causal roles, passed through the DML engine for orthogonal effect estimation and robustness checks, and the resulting metrics are persisted as an artifact that the Streamlit UI reads to power interactive scenario analysis.
 
-   # Launch the interactive scenario simulator
-   uv run streamlit run src/causal_inference/api/app.py
-   ```
+## Trade-offs & Roadmap
 
-4. **Validate Code:**
-
-   ```bash
-   make all
-   ```
-
-## Technical Roadmap & Known Limitations
-
-To maintain prototyping velocity, specific technical and econometric trade-offs were made. These establish the roadmap for productionization:
-
-- **Linear Probability Model (LPM) on Binary Targets:** The outcome (`Purchase_CH`) is binary, but the pipeline utilizes a PLR model with a continuous LightGBM regressor. This functions mathematically as an additive LPM, which is why the Streamlit dashboard manually clips projected probabilities to a `[0, 1]` range. Production deployments will migrate to an Interactive Regression Model (`DoubleMLIRM`) or a Logistic PLR to natively bound outputs.
-
-- **Unconstrained Nuisance Models:** The `LGBMRegressor` parameters are currently fixed (`n_estimators=300`) without depth constraints. Because DML relies on rapid nuisance convergence rates for Neyman orthogonality, the production pipeline will introduce cross-validated hyperparameter tuning to prevent out-of-sample overfitting on small datasets.
-
-- **Competitor Collinearity:** The competitor pricing features (`SalePriceMM`, `PriceMM`, `SpecialMM`) contain deterministic collinearity (`SalePrice = Price - Discount`). While gradient-boosted trees route around this rank deficiency mathematically, deterministic features will be pruned in subsequent iterations to stabilize feature importance scores and reduce variance.
-
-- **Illustrative Sensitivity Bounds:** The omitted variable bias (OVB) sensitivity bounds are currently hardcoded to an arbitrary 5%. In a rigorous deployment, these bounds will be dynamically benchmarked against the explanatory power of the strongest observed covariate (e.g., `LoyalCH`).
-
-- **Unobserved Confounders:** The Directed Acyclic Graph (DAG) assumes selection on observables. High-dimensional fixed effects (e.g., `StoreID` or `Week`) are currently omitted, potentially leaving residual confounding bias.
+- **Linear probability approximation:** The binary purchase outcome is currently modeled via a continuous PLR (effectively an additive LPM), requiring manual `[0, 1]` clipping in the UI. **Planned:** migrate to `DoubleMLIRM` or a logistic PLR for natively bounded outputs.
+- **Fixed nuisance-model hyperparameters:** `LGBMRegressor` settings are currently static rather than tuned. **Planned:** introduce cross-validated hyperparameter search to reduce overfitting risk on small samples.
+- **Sensitivity bounds are illustrative:** Omitted-variable-bias bounds are hardcoded at 5%. **Planned:** benchmark bounds dynamically against the explanatory power of the strongest observed covariate (e.g., `LoyalCH`), and evaluate incorporating additional fixed effects (e.g., store/week) to reduce residual confounding risk.
 </file>
 
