@@ -3,7 +3,7 @@
 Estimates the causal effect of price on purchase probability from observational retail data, and serves it as a scenario simulator.
 
 ![Scenario Simulator Dashboard](docs/images/dashboard.png)
-<!-- TODO: capture screenshot -->
+
 
 ## The problem
 
