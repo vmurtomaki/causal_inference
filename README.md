@@ -1,60 +1,70 @@
-# Causal Pricing Intelligence Pipeline
+# Causal Pricing Engine
 
-A production-minded analytical pipeline that isolates the true causal effect of price on purchase behavior — separating genuine demand response from confounding noise like brand loyalty and competitor pricing — to support data-driven pricing decisions.
+Estimates the causal effect of price on purchase probability from observational retail data, and serves it as a scenario simulator.
 
-> [!NOTE]
-> **Screenshot placeholder:** add a screenshot of the Streamlit scenario simulator here, e.g. `![Scenario Simulator Dashboard](docs/images/dashboard.png)`
+![Scenario Simulator Dashboard](docs/images/dashboard.png)
+<!-- TODO: capture screenshot -->
 
-## Overview & Impact
+## The problem
 
-- **Causal, not just correlational, insight:** Uses Double Machine Learning (DML) with a Partially Linear Regression (PLR) specification to estimate the unbiased marginal effect of price on purchase probability, controlling for high-dimensional confounders.
-- **Deconfounding at scale:** K-fold cross-fitting with gradient-boosted nuisance models strips out the influence of variables like customer loyalty and competitor pricing that would otherwise bias a naive regression.
-- **Decision-ready output:** Estimates feed a live scenario simulator so stakeholders can test hypothetical price changes and see projected impact on purchase probability and churn risk in real time.
-- **Built-in model scrutiny:** Includes an omitted-variable-bias sensitivity analysis to quantify how robust the causal estimate is to unobserved confounding — not just a point estimate taken at face value.
+Sales data can't tell a pricing team what a price change costs them. Customers who buy at higher prices are disproportionately loyal buyers, and competitors discount in response to your own moves — so a naive price-vs-purchase regression measures brand loyalty and competitive dynamics as much as it measures demand. The estimate it produces is biased in an unknown direction by an unknown amount, which is worse than useless for a pricing decision.
 
-## Tech Stack
+This pipeline separates the demand response from the confounding, using Double Machine Learning to estimate the marginal effect of price on purchase probability while flexibly controlling for loyalty and competitor pricing. It then puts that estimate behind a slider so a stakeholder can test a scenario before committing to it.
 
-`Python 3.12`, `DoubleML`, `LightGBM`, `pandas`, `scikit-learn`, `Streamlit`, `python-dotenv`, `uv`, `Ruff`, `MyPy`, `Pytest`
+Data: the ISLR `OJ` dataset — 1,070 orange juice purchases, treatment is Citrus Hill's sale price, outcome is whether the customer chose Citrus Hill over Minute Maid.
 
-## Engineering Rigor
-
-- **Deterministic environments:** Dependency resolution and virtual environments are fully locked and reproducible via `uv` and `uv.lock` — no ambient `pip`/`virtualenv` drift between machines.
-- **Strict static analysis:** Aggressive `Ruff` linting (bugbear, security, import hygiene) and `MyPy --strict` type checking enforced across the `src/` layout, backed by a `py.typed` marker for downstream type consumers.
-- **Isolated automated testing:** A `Pytest` suite with fixture-based isolation (`tmp_path`) covers core services, orchestrated via a single `make test` / `make all` entry point suitable for CI.
-
-## Quick Start
+## Run it
 
 ```bash
-# 1. Install uv
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# 2. Clone and sync the locked environment
-git clone <repo_url> && cd causal_inference
-uv sync
-
-# 3. Run the pipeline, then launch the dashboard
-uv run --env-file .env python src/causal_inference/main.py
-uv run streamlit run src/causal_inference/api/app.py
+uv sync && make run-all
 ```
 
-## Project Architecture
+Fits the model, writes `data/processed/model_metrics.json`, then launches the Streamlit simulator on `:8501`.
 
-**Ingestion → Causal Modeling → Artifact Persistence → UI**
+Requires [`uv`](https://docs.astral.sh/uv/) and the dataset at `data/raw/oj_data.csv`. To produce it from R:
+
+```r
+write.csv(ISLR2::OJ, "data/raw/oj_data.csv", row.names = FALSE)
+```
+
+Paths, fold count, and seed are overridable via `.env` (see `config.py` for defaults).
+
+## The result
+
+**θ̂₀ = −0.5570, p = 1.79 × 10⁻⁸.** A $1.00 increase in Citrus Hill's sale price lowers the probability of choosing Citrus Hill by roughly 55.7 percentage points, holding brand loyalty and competitor price/promotion fixed.
+
+Two caveats I'd rather state than have someone find:
+
+- Observed sale prices span roughly $1.69–$2.09, so a full $1.00 move is outside the support of the data. The per-dollar figure is a linear extrapolation and should be read as a local slope, not a prediction about dollar-scale price changes.
+- The outcome is binary but the estimator is a partially linear model, so this is effectively a linear probability model. Fitted probabilities are clipped to [0, 1] in the UI.
+
+**Robustness.** Omitted-variable-bias sensitivity analysis puts the robustness value at ≈14.9%: an unobserved confounder would need to explain about 14.9% of residual variance in both treatment and outcome to drive the estimate to zero. That's substantially more than any single observed covariate explains here, so the sign and rough magnitude survive plausible unobserved confounding.
+
+`PriceCH` and `SpecialCH` are deliberately excluded from the confounder set — `SalePriceCH` is a deterministic function of both, so conditioning on them destroys the exogenous treatment variation the orthogonal score depends on. This is the one modeling decision most likely to be questioned, so it's documented at the point of decision in `services/data_ingestion.py` and asserted in the tests.
+
+## What I'd do differently
+
+- **Use a natively bounded estimator.** The LPM approximation is the weakest link. `DoubleMLIRM` or a logistic PLR gives bounded outputs and removes the UI clipping hack entirely.
+- **Tune the nuisance learners.** LightGBM hyperparameters are static. With ~1,000 rows and 5-fold cross-fitting, nested cross-validation for the nuisance models is cheap and would reduce overfitting risk in the folds.
+- **Widen the confounder set.** Four covariates is thin. Store and week fixed effects are available in the source data and would absorb a meaningful chunk of what's currently residual confounding.
+- **Benchmark the sensitivity bounds instead of hardcoding them.** The 5% cf_y/cf_d values are illustrative. The informative version benchmarks the hypothetical confounder against the explanatory power of `LoyalCH`, which answers "how does this compare to the strongest thing we *did* observe."
+- **Ship the data.** Requiring an R export to run the project is friction I created for no reason.
+
+## Stack
+
+Python 3.12 · DoubleML · LightGBM · pandas · scikit-learn · Streamlit · uv · Ruff · MyPy (strict) · Pytest
+
+## Layout
 
 ```
 src/causal_inference/
-├── services/    # Data ingestion & causal-role partitioning (Y / D / X)
-├── core/        # DML/PLR estimation engine + sensitivity analysis
-├── services/    # Artifact (metrics) serialization to JSON
-├── api/         # Streamlit scenario-simulator dashboard
-├── config.py    # Environment-driven configuration
-└── main.py      # Pipeline orchestrator
+├── services/    data ingestion, causal-role partitioning (Y/D/X), artifact I/O
+├── core/        DML/PLR estimation + OVB sensitivity analysis
+├── api/         Streamlit scenario simulator
+├── config.py    environment-driven configuration
+└── main.py      pipeline orchestrator
 ```
 
-Raw observational data is ingested and split into causal roles, passed through the DML engine for orthogonal effect estimation and robustness checks, and the resulting metrics are persisted as an artifact that the Streamlit UI reads to power interactive scenario analysis.
+Ingestion → DML estimation → JSON artifact → UI. The dashboard reads the artifact rather than refitting, so it starts instantly and always displays a reproducible number tied to a specific pipeline run.
 
-## Trade-offs & Roadmap
-
-- **Linear probability approximation:** The binary purchase outcome is currently modeled via a continuous PLR (effectively an additive LPM), requiring manual `[0, 1]` clipping in the UI. **Planned:** migrate to `DoubleMLIRM` or a logistic PLR for natively bounded outputs.
-- **Fixed nuisance-model hyperparameters:** `LGBMRegressor` settings are currently static rather than tuned. **Planned:** introduce cross-validated hyperparameter search to reduce overfitting risk on small samples.
-- **Sensitivity bounds are illustrative:** Omitted-variable-bias bounds are hardcoded at 5%. **Planned:** benchmark bounds dynamically against the explanatory power of the strongest observed covariate (e.g., `LoyalCH`), and evaluate incorporating additional fixed effects (e.g., store/week) to reduce residual confounding risk.
+`make all` runs format, lint, typecheck, and tests. `src/` is MyPy-strict with a `py.typed` marker; the dependency graph is fully locked via `uv.lock`.
