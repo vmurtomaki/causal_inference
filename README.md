@@ -1,3 +1,5 @@
+![CI](https://github.com/vmurtomaki/causal_inference/actions/workflows/ci.yml/badge.svg)
+
 # Causal Pricing Engine
 
 Estimates the causal effect of price on purchase probability from observational retail data, and serves it as a scenario simulator.
