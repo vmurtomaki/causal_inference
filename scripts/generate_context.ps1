@@ -17,7 +17,7 @@ function ShouldIncludeContent($File) {
         '.lock', '.faiss', '.pt', '.pth', '.tensors', '.index', '.pyc', '.pyd', '.csv'
     )
     $ExcludeNames = @(
-        '.gitignore', '.python-version', 'uv.lock', 'llm_context.txt', 
+        '.python-version', 'uv.lock', 'llm_context.txt', 
         'generate_context.ps1', '.env', 'CACHEDIR.TAG'
     )
 
