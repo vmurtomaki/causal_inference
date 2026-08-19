@@ -17,6 +17,7 @@ class Config:
     data_path: str = os.getenv("DATA_PATH", "data/raw/oj_data.csv")
     artifact_path: str = os.getenv("ARTIFACT_PATH", "data/processed/model_metrics.json")
     n_folds: int = int(os.getenv("N_FOLDS", "5"))
+    n_rep: int = int(os.getenv("N_REP", "5"))
     random_seed: int = int(os.getenv("RANDOM_SEED", "42"))
 
 

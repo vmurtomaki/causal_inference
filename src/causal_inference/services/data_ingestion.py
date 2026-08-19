@@ -30,6 +30,10 @@ def partition_causal_roles(df: pd.DataFrame) -> tuple[pd.DataFrame, str, str, li
     # PriceCH and SpecialCH deliberately EXCLUDED: SalePriceCH = PriceCH - (promo discount
     # implied by SpecialCH), so conditioning on them induces perfect collinearity with the
     # treatment and destroys the exogenous variance the orthogonal score requires.
+    # LoyalCH is an exponentially smoothed loyalty index updated from *past* purchases
+    # only (L_t = λ·Purchase_{t-1} + (1-λ)·L_{t-1}), per the standard construction in
+    # Guadagni & Little (1983); it does not incorporate the current-row purchase, so
+    # conditioning on it here is not post-treatment.
     x_cols = [
         "LoyalCH",
         "SalePriceMM",

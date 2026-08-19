@@ -28,9 +28,14 @@ def run_dashboard() -> None:
 
     st.title("📈 Causal Pricing AI: Scenario Simulator")
     st.markdown(
-        "**Model Status:** Production-Ready\n\n"
+        "**Model Status:** Research prototype — see README caveats.\n\n"
         f"**Estimated Marginal Effect ($\\theta_0$):** `{marginal_effect:.4f}`\n\n"
-        f"*Interpretation: A $1.00 increase in price changes purchase probability by ~{marginal_effect * 100:.2f} percentage points.*"
+        f"*Interpretation: A $0.10 increase in price changes purchase probability by ~{marginal_effect * 10:.2f} percentage points.*"
+    )
+    st.caption(
+        "⚠️ Estimated via a linear probability model (partially linear DML on a binary "
+        "outcome). Treat this as a local slope near the observed price range, not a "
+        "calibrated probability model — projected probabilities are clipped to [0, 1]."
     )
 
     st.divider()
@@ -38,7 +43,7 @@ def run_dashboard() -> None:
     # Sidebar for Scenario Inputs
     st.sidebar.header("Scenario Configuration")
     price_change = st.sidebar.slider(
-        "Hypothetical Price Increase ($)", min_value=-1.0, max_value=2.0, value=0.5, step=0.1
+        "Hypothetical Price Increase ($)", min_value=-0.20, max_value=0.20, value=0.10, step=0.05
     )
 
     # Calculation logic

@@ -22,8 +22,10 @@ def main() -> None:
 
     print(f"Data successfully parsed. Confounders detected: {len(x_cols)}")
     print(f"Baseline Purchase Probability: {baseline_prob:.4f}")
-    print("Executing Double Machine Learning (PLR) cross-fitting sequence...")
-
+    print(
+        f"Executing Double Machine Learning (PLR) cross-fitting sequence with "
+        f"{config.n_folds} folds and {config.n_rep} repetitions..."
+    )
     # Execute orthogonal estimation
     dml_model = estimate_price_elasticity(
         df=df,
@@ -31,6 +33,7 @@ def main() -> None:
         d_col=d_col,
         x_cols=x_cols,
         n_folds=config.n_folds,
+        n_rep=config.n_rep,
         random_seed=config.random_seed,
     )
 
@@ -44,7 +47,8 @@ def main() -> None:
     print(f"Treatment Variable (D): {d_col}")
     print(f"Outcome Variable (Y)  : {y_col}")
     print(f"\nMarginal Effect (θ₀)  : {marginal_effect:.4f}")
-    print(f"P-Value               : {p_value:.4e}")
+    p_val_display = "< 0.001" if p_value < 0.001 else f"{p_value:.4f}"
+    print(f"P-Value               : {p_val_display}")
 
     print("\nInterpretation:")
     print(

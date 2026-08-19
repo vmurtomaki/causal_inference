@@ -4,7 +4,13 @@ from lightgbm import LGBMRegressor
 
 
 def estimate_price_elasticity(
-    df: pd.DataFrame, y_col: str, d_col: str, x_cols: list[str], n_folds: int, random_seed: int
+    df: pd.DataFrame,
+    y_col: str,
+    d_col: str,
+    x_cols: list[str],
+    n_folds: int,
+    n_rep: int,
+    random_seed: int,
 ) -> DoubleMLPLR:
     dml_data = DoubleMLData(df, y_col=y_col, d_cols=d_col, x_cols=x_cols)
 
@@ -14,7 +20,12 @@ def estimate_price_elasticity(
     ml_m = LGBMRegressor(n_estimators=300, learning_rate=0.05, random_state=random_seed)
 
     dml_plr = DoubleMLPLR(
-        obj_dml_data=dml_data, ml_l=ml_l, ml_m=ml_m, n_folds=n_folds, score="partialling out"
+        obj_dml_data=dml_data,
+        ml_l=ml_l,
+        ml_m=ml_m,
+        n_folds=n_folds,
+        n_rep=n_rep,
+        score="partialling out",
     )
     dml_plr.fit()
     return dml_plr
