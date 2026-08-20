@@ -33,14 +33,14 @@ Paths, fold count, and seed are overridable via `.env` (see `config.py` for defa
 
 ## The result
 
-**θ̂₀ = −0.5570, p < 0.001.** A $1.00 increase in Citrus Hill's sale price lowers the probability of choosing Citrus Hill by roughly 55.7 percentage points, holding brand loyalty and competitor price/promotion fixed.
+**θ̂₀ = −0.4604, p < 0.001.** A $1.00 increase in Citrus Hill's sale price lowers the probability of choosing Citrus Hill by roughly 46.04 percentage points, holding brand loyalty and competitor price/promotion fixed.
 
 Three caveats I'd rather state than have someone find:
-- Observed sale prices span roughly $1.69–$2.09, so a full $1.00 move is outside the support of the data. The per-dollar figure is a linear extrapolation and should be read as a local slope, not a prediction about dollar-scale price changes.
+- Observed sale prices span roughly $1.39–$2.09, so a full $1.00 move is outside the support of the data. The per-dollar figure is a linear extrapolation and should be read as a local slope, not a prediction about dollar-scale price changes.
 - The outcome is binary but the estimator is a partially linear model, so this is effectively a linear probability model. Fitted probabilities are clipped to [0, 1] in the UI.
 - Observations cluster by store and week; the model was fitted with i.i.d. standard errors, so the reported p-value is understated. The point estimate is the defensible quantity here.
 
-**Robustness.** Omitted-variable-bias sensitivity analysis puts the robustness value at ≈14.9%: an unobserved confounder would need to explain about 14.9% of residual variance in both treatment and outcome to drive the estimate to zero. That's substantially more than any single observed covariate explains here, so the sign and rough magnitude survive plausible unobserved confounding.
+**Robustness.** Omitted-variable-bias sensitivity analysis puts the robustness value at ≈12.34%: an unobserved confounder would need to explain about 12.34% of residual variance in both treatment and outcome to drive the estimate to zero. That's substantially more than any single observed covariate explains here, so the sign and rough magnitude survive plausible unobserved confounding.
 
 `PriceCH` and `SpecialCH` are deliberately excluded from the confounder set — `SalePriceCH` is a deterministic function of both, so conditioning on them destroys the exogenous treatment variation the orthogonal score depends on. This is the one modeling decision most likely to be questioned, so it's documented at the point of decision in `services/data_ingestion.py` and asserted in the tests.
 

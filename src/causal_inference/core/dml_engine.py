@@ -1,3 +1,6 @@
+import warnings
+
+import numpy as np
 import pandas as pd
 from doubleml import DoubleMLData, DoubleMLPLR
 from lightgbm import LGBMRegressor
@@ -12,22 +15,36 @@ def estimate_price_elasticity(
     n_rep: int,
     random_seed: int,
 ) -> DoubleMLPLR:
+    np.random.seed(random_seed)  # seeds DoubleML's internal fold-splitting RNG
     dml_data = DoubleMLData(df, y_col=y_col, d_cols=d_col, x_cols=x_cols)
-
     # n_estimators raised from 3 -> 300 (with shrinkage) so the nuisance learners can
     # actually approach the true conditional expectations rather than underfitting.
-    ml_l = LGBMRegressor(n_estimators=300, learning_rate=0.05, random_state=random_seed)
-    ml_m = LGBMRegressor(n_estimators=300, learning_rate=0.05, random_state=random_seed)
+    # Single-threaded + deterministic: multithreaded LightGBM's non-associative float
+    # summation made theta_hat drift ~0.03 between identical runs otherwise.
 
-    dml_plr = DoubleMLPLR(
-        obj_dml_data=dml_data,
-        ml_l=ml_l,
-        ml_m=ml_m,
-        n_folds=n_folds,
-        n_rep=n_rep,
-        score="partialling out",
+    ml_l = LGBMRegressor(
+        n_estimators=300, learning_rate=0.05, random_state=random_seed,
+        n_jobs=1, deterministic=True, force_row_wise=True, verbose=-1,
     )
-    dml_plr.fit()
+    ml_m = LGBMRegressor(
+        n_estimators=300, learning_rate=0.05, random_state=random_seed,
+        n_jobs=1, deterministic=True, force_row_wise=True, verbose=-1,
+    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="X does not have valid feature names",
+            category=UserWarning,
+        )
+        dml_plr = DoubleMLPLR(
+            obj_dml_data=dml_data,
+            ml_l=ml_l,
+            ml_m=ml_m,
+            n_folds=n_folds,
+            n_rep=n_rep,
+            score="partialling out",
+        )
+        dml_plr.fit()
     return dml_plr
 
 
