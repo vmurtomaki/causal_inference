@@ -13,7 +13,7 @@ def main() -> None:
     """
     print("Initiating deterministic causal inference pipeline...")
 
-    # Extract and format the unconfounded matrix
+    # Extract and assign causal roles (Y, D, X)
     raw_df = fetch_observational_data(config.data_path)
     df, y_col, d_col, x_cols = partition_causal_roles(raw_df)
 
@@ -52,9 +52,10 @@ def main() -> None:
 
     print("\nInterpretation:")
     print(
-        f"A $1.00 increase in {d_col} changes the probability of purchasing "
-        f"Citrus Hill by approximately {marginal_effect * 100:.2f} percentage points, "
-        "holding brand loyalty and competitor pricing constant."
+        f"A $0.10 increase in {d_col} changes the probability of purchasing "
+        f"Citrus Hill by approximately {marginal_effect * 10:.2f} percentage points, "
+        "holding brand loyalty and competitor pricing constant. Read as a local slope: "
+        "the treatment spans $1.39-$2.09, so dollar-scale moves are out of support."
     )
 
     print("\nModel Statistical Summary:")

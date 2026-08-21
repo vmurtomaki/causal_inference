@@ -26,7 +26,7 @@ def run_dashboard() -> None:
     marginal_effect = metrics["marginal_effect"]
     baseline_probability = metrics["baseline_prob"]
 
-    st.title("📈 Causal Pricing AI: Scenario Simulator")
+    st.title("Causal Pricing Engine — Scenario Simulator")
     st.markdown(
         "**Model Status:** Research prototype — see README caveats.\n\n"
         f"**Estimated Marginal Effect ($\\theta_0$):** `{marginal_effect:.4f}`\n\n"
@@ -65,8 +65,8 @@ def run_dashboard() -> None:
 
     with col2:
         st.subheader("Business Insight")
-        if prob_impact < -0.20:
-            st.error("⚠️ Significant risk of customer churn for Citrus Hill.")
+        if prob_impact < -0.05:
+            st.error("Material share loss for Citrus Hill at this price move.")
         elif prob_impact > 0.05:
             st.success("✅ Scenario likely to yield a favorable volume response.")
         else:

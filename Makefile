@@ -13,10 +13,10 @@ test:
 	uv run pytest tests/ -v
 
 run-pipeline:
-	uv run --env-file .env python src/causal_inference/main.py
+	uv run python src/causal_inference/main.py
 
 run-app:
-	uv run --env-file .env streamlit run src/causal_inference/api/app.py
+	uv run streamlit run src/causal_inference/api/app.py
 
 run-all: run-pipeline run-app
 

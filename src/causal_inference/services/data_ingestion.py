@@ -27,9 +27,12 @@ def partition_causal_roles(df: pd.DataFrame) -> tuple[pd.DataFrame, str, str, li
     y_col = "Purchase_CH"
     d_col = "SalePriceCH"
 
-    # PriceCH and SpecialCH deliberately EXCLUDED: SalePriceCH = PriceCH - (promo discount
-    # implied by SpecialCH), so conditioning on them induces perfect collinearity with the
-    # treatment and destroys the exogenous variance the orthogonal score requires.
+    # PriceCH and SpecialCH deliberately EXCLUDED. The identity is
+    # SalePriceCH = PriceCH - DiscCH, and DiscCH is ~0 whenever SpecialCH == 0, so PriceCH
+    # and SpecialCH together leave almost no residual treatment variation for the orthogonal
+    # score. This is a near-collinearity / variance argument, not exact collinearity:
+    # PriceCH alone does NOT pin SalePriceCH. Cost of the exclusion: list-price level is
+    # left uncontrolled, which is a live confounding channel. Documented, not resolved.
     # LoyalCH is an exponentially smoothed loyalty index updated from *past* purchases
     # only (L_t = λ·Purchase_{t-1} + (1-λ)·L_{t-1}), per the standard construction in
     # Guadagni & Little (1983); it does not incorporate the current-row purchase, so
